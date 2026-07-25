@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: identity-service # MUST exactly match config-repo/identity-service.yml's filename
+    # Pull remaining config from the config server. 'optional:' means: if the
+    # config server can't be reached, DON'T fail startup ? just proceed with
+    # whatever's defined locally/in defaults. Omitting 'optional:' makes the
+    # config server a hard dependency for even starting up, which is a valid
+    # choice too (fail fast vs degrade gracefully) ? we're choosing graceful
+    # here since this is local learning, not a real prod trade-off decision.
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true   # find config-server via Eureka, not a hardcoded URL
+        service-id: config-server
+
+  # We need Eureka's address locally (chicken-and-egg: can't discover the
+  # config server via Eureka without first knowing where Eureka itself is).
+  # This is the one piece of infra address that's always local, everywhere.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    instance:
+      prefer-ip-address: true
