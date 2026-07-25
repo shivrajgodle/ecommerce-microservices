@@ -1,0 +1,23 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: discovery-server
+
+eureka:
+  client:
+    # This server does NOT register itself as a client of another Eureka
+    # instance, and does NOT try to fetch a registry from anywhere else ?
+    # it IS the registry. Without these two false flags, this standalone
+    # server would try to register with itself, producing confusing
+    # startup warnings (harmless, but noisy and worth avoiding).
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    # In a real production HA setup, you'd run 2+ Eureka nodes that DO
+    # register with each other (peer awareness) ? mentioned here so you
+    # know this single-node setup is a deliberate simplification for
+    # learning, not the production pattern.
+    enable-self-preservation: false
+
