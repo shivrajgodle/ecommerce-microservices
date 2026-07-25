@@ -1,0 +1,32 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    # 'native' means "read config files from the local classpath/filesystem"
+    # instead of the more common production choice, a Git repository.
+    # We're using native here so you don't need a Git repo set up just to
+    # learn the mechanism ? but know that Git-backed is the real-world
+    # default (versioned history, rollback, audit trail of every config
+    # change ? things a plain folder doesn't give you).
+    active: native
+
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/config-repo
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-id-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh
