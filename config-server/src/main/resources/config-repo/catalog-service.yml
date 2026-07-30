@@ -1,0 +1,20 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/catalog_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+# Reused from the monolith's Phase 0 reasoning — Caffeine cache for
+# product/category lookups. We'll actually wire @Cacheable onto specific
+# methods once the service layer exists (a couple files from now).
+spring.cache:
+  type: caffeine
+  caffeine:
+    spec: maximumSize=500,expireAfterWrite=600s
