@@ -26,3 +26,7 @@ management:
     web:
       exposure:
         include: health,info,gateway
+
+app:
+  jwt:
+    secret: "9fcb24c8594d0fd31c3a1cf1047f7dfecc2448f7d5245c0ec2bcbd48651eba56"
