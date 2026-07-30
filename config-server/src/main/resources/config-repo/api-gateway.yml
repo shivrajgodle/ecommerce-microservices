@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # We're using EXPLICIT routes rather than
+          # discovery.locator.enabled: true (which would auto-generate a
+          # route per registered Eureka service name, e.g. /IDENTITY-SERVICE/**).
+          # Explicit routes cost more typing but give precise control over
+          # each route's path, and — critically for File 2 next — let us
+          # attach specific filters (like JWT validation) only where needed.
+          routes:
+            - id: identity-service-auth
+              uri: lb://IDENTITY-SERVICE
+              predicates:
+                - Path=/api/v1/auth/**
+          discovery:
+            locator:
+              enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
