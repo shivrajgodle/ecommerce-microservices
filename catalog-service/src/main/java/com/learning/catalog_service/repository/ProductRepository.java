@@ -2,13 +2,14 @@ package com.learning.catalog_service.repository;
 
 import com.learning.catalog_service.entity.Product;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.awt.print.Pageable;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public interface ProductRepository extends JpaRepository<Product,Long>,
     // section for exactly where this breaks down).
     // ============================================================
 
-    Optional<Product> findBySky(String sku);
+    Optional<Product> findBySku(String sku);
 
     boolean existsBySku(String sku);
 
@@ -66,8 +67,8 @@ public interface ProductRepository extends JpaRepository<Product,Long>,
     List<Product>  findAvailableProductsByCategories(@Param("categoryId") Long categoryId);
 
     // JPQL aggregate query — returns a scalar, not entities.
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.categoryId = :categoryId AND p.active = true")
-    long countActiveProductsInCategory(@Param("categoryId") Long categoryId);
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.active = true")
+    Long countActiveProductsInCategory(@Param("categoryId") Long categoryId);
 
     // ============================================================
     // NATIVE QUERY — actual raw SQL, runs directly against Postgres,

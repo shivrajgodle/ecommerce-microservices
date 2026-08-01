@@ -60,7 +60,7 @@ public class ProductSpecifications {
     }
 
     public static Specification<Product> isActive(){
-        return ((root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("active")))
+        return ((root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("active")));
     }
 
 }

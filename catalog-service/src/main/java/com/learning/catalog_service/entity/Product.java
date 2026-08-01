@@ -25,7 +25,7 @@ import java.util.Set;
                 @Index(name = "idx_product_sku", columnList = "sku", unique = true)
         }
 )
-public class Product {
+public class Product extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 50)
     private String sku;
