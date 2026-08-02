@@ -1,0 +1,25 @@
+server:
+  port: 8083
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cart_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+
+# Feign's own client-level timeout — separate from, and layered
+# UNDERNEATH, the Resilience4j timeout we'll add in File 3. Feign
+# gives up on the raw HTTP call after this; Resilience4j governs
+# what happens to the CALLER when that failure (or a slow response)
+# occurs. Two different concerns, both needed.
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 3000
+        readTimeout: 3000
