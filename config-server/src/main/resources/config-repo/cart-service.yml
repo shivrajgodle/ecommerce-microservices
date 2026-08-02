@@ -23,3 +23,25 @@ feign:
       default:
         connectTimeout: 3000
         readTimeout: 3000
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalogService:
+        sliding-window-size: 10                # evaluate failure rate over the last 10 calls
+        sliding-window-type: COUNT_BASED
+        failure-rate-threshold: 50              # open the circuit if >=50% of those 10 calls failed
+        wait-duration-in-open-state: 10s        # stay OPEN (rejecting calls immediately) for 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        # This is the payoff of the ErrorDecoder work above: a 404
+        # (product genuinely doesn't exist) does NOT count toward the
+        # failure rate that would open this circuit. Only genuine
+        # infrastructure problems (timeouts, connection refused, 5xx
+        # from Catalog Service) should be able to trip it.
+        ignore-exceptions:
+          - com.learning.cartservice.exception.ResourceNotFoundException
+  timelimiter:
+    instances:
+      catalogService:
+        timeout-duration: 3s
