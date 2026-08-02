@@ -1,5 +1,6 @@
 package com.learning.catalog_service.exception;
 
+
 import com.learning.catalog_service.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

@@ -31,7 +31,7 @@ import java.util.Objects;
 @Component
 public class JwtValidationFilter implements GlobalFilter , Ordered {
 
-    @Value("{app.jwt.secret}")
+    @Value("${app.jwt.secret}")
     private String secretKeyBase64;
 
     // Paths that must remain reachable WITHOUT a token — you can't be

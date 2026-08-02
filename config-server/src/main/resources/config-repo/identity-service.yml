@@ -17,6 +17,6 @@ app:
     # Manager, Vault, etc.), NEVER committed to a config repo in plaintext.
     # This is a deliberately simplified stand-in for learning purposes —
     # generate your own random 256-bit+ string rather than reusing this one.
-    secret: "9fcb24c8594d0fd31c3a1cf1047f7dfecc2448f7d5245c0ec2bcbd48651eba56"
+    secret: "ZWNvbW1lcmNlLWlkZW50aXR5LXNlcnZpY2Utc3VwZXItc2VjcmV0LWtleS1jaGFuZ2UtbWU="
     access-token-expiration-ms: 900000        # 15 minutes
     refresh-token-expiration-ms: 604800000    # 7 days
