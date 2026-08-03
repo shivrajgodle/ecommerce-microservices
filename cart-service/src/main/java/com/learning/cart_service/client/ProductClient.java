@@ -46,8 +46,7 @@ public class ProductClient {
             ApiResponseWrapper<ProductInfo> response = catalogServiceClient.getProductById(productId);
             return response.getData();
         },
-                throwable -> handleFallback(productId,throwable);
-        );
+                throwable -> handleFallback(productId,throwable));
     }
 
     private ProductInfo handleFallback(Long productId, @Nullable Throwable throwable) {

@@ -40,7 +40,7 @@ resilience4j:
         # infrastructure problems (timeouts, connection refused, 5xx
         # from Catalog Service) should be able to trip it.
         ignore-exceptions:
-          - com.learning.cartservice.exception.ResourceNotFoundException
+          - com.learning.cart_service.exception.ResourceNotFoundException
   timelimiter:
     instances:
       catalogService:

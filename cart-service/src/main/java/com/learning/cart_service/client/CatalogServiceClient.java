@@ -25,6 +25,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "catalog-service", path = "/api/v1/products",configuration = CatalogFeignConfig.class)
 public interface CatalogServiceClient {
 
-    @GetMapping("\{id}")
+    @GetMapping("/{id}")
     ApiResponseWrapper<ProductInfo> getProductById(@PathVariable("id") Long id);
 }
