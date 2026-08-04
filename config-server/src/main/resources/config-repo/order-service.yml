@@ -1,0 +1,60 @@
+server:
+  port: 8084
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  # Producer half of Phase G's shared Kafka block. The consumer half
+  # (group-id, deserializer) gets added in File 4, once we actually
+  # write the listener for payment.succeeded/payment.failed.
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 3000
+        readTimeout: 3000
+
+# TWO separate circuit breaker instances — one per downstream
+# dependency. Configuring them independently matters: Cart Service and
+# Catalog Service can fail independently of each other, and lumping
+# them under one shared circuit breaker would mean a Catalog Service
+# outage could incorrectly trip the breaker for (unrelated, still
+# healthy) Cart Service calls, and vice versa.
+resilience4j:
+  circuitbreaker:
+    instances:
+      cartService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+      catalogService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        ignore-exceptions:
+          - com.learning.order_service.exception.ResourceNotFoundException
+  timelimiter:
+    instances:
+      cartService:
+        timeout-duration: 3s
+      catalogService:
+        timeout-duration: 3s

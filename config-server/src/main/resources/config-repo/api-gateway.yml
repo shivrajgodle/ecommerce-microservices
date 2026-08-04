@@ -25,6 +25,10 @@ spring:
               uri: lb://CART-SERVICE
               predicates:
                 - Path=/api/v1/cart/**
+            - id: order-service
+              uri: lb://ORDER-SERVICE
+              predicates:
+                - Path=/api/v1/orders/**
           discovery:
             locator:
               enabled: false
