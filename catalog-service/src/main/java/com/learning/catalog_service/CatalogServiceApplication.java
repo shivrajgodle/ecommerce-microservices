@@ -3,6 +3,7 @@ package com.learning.catalog_service;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.retry.annotation.EnableRetry;
 
 /**
  * @EnableCaching switches on Spring's caching abstraction — without it,
@@ -13,6 +14,7 @@ import org.springframework.cache.annotation.EnableCaching;
  */
 @SpringBootApplication
 @EnableCaching
+@EnableRetry
 public class CatalogServiceApplication {
 
 	public static void main(String[] args) {

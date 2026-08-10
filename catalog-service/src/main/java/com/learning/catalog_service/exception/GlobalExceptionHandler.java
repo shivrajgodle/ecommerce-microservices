@@ -3,6 +3,7 @@ package com.learning.catalog_service.exception;
 
 import com.learning.catalog_service.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -95,6 +96,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 ApiResponse.error(HttpStatus.BAD_REQUEST.value(), ex.getMessage(),null));
     }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInsufficientStock(InsufficientStockException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(HttpStatus.CONFLICT.value(),ex.getMessage(),null));
+    }
+
+    // Only reachable if @Retryable EXHAUSTS all 3 attempts and the
+    // conflict still hasn't resolved — genuinely rare, but must be handled
+    // cleanly rather than surfacing as a raw 500.
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLockFailure(OptimisticLockingFailureException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(HttpStatus.CONFLICT.value(),"This product was updated by another operation — please try again",null));
+    }
+
 
     /**
      * The catch-all. Deliberately positioned LAST and matched only when

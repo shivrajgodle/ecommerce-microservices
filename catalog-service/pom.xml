@@ -56,6 +56,19 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-config</artifactId>
 		</dependency>
+		<!-- Spring Retry: powers @Retryable below. spring-aspects is required
+		 alongside it because, like @Cacheable/@Transactional, @Retryable
+		 works via an AOP proxy — and Spring Retry specifically needs
+		 AspectJ's aspect infrastructure on the classpath to weave in its
+		 interceptor, not just spring-boot-starter-aop's proxy-based AOP. -->
+		<dependency>
+			<groupId>org.springframework.retry</groupId>
+			<artifactId>spring-retry</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aspects</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>

@@ -2,11 +2,13 @@ package com.learning.catalog_service.service;
 
 import com.learning.catalog_service.dto.request.ProductRequest;
 import com.learning.catalog_service.dto.request.ProductSearchRequest;
+import com.learning.catalog_service.dto.request.StockDecrementItem;
 import com.learning.catalog_service.dto.response.ProductResponse;
 import com.learning.catalog_service.entity.Category;
 import com.learning.catalog_service.entity.Product;
 import com.learning.catalog_service.entity.Tag;
 import com.learning.catalog_service.exception.DuplicateResourceException;
+import com.learning.catalog_service.exception.InsufficientStockException;
 import com.learning.catalog_service.exception.ResourceNotFoundException;
 import com.learning.catalog_service.mapper.ProductMapper;
 import com.learning.catalog_service.repository.CategoryRepository;
@@ -20,10 +22,14 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -156,6 +162,72 @@ public class ProductService {
     }
 
 
+    /**
+     * DELIBERATELY split into two methods — this is not a stylistic choice,
+     * it's REQUIRED for correct behavior, and it's a genuinely important
+     * Spring internals gotcha worth understanding precisely.
+     * Both @Retryable and @Transactional work via AOP PROXIES wrapping the
+     * bean. If a single method carried BOTH annotations, only ONE proxy
+     * layer would actually take effect in the way you'd expect for retry
+     * semantics: @Transactional's proxy would open ONE transaction before
+     * @Retryable's logic runs, meaning every retry attempt would execute
+     * inside the SAME already-partially-failed transaction — which, after
+     * the first OptimisticLockException, is likely already marked
+     * rollback-only by Spring, making subsequent "retries" fail immediately
+     * and uselessly.
+     *
+     * Splitting it means: THIS outer method is retried by Spring Retry, and
+     * EACH retry attempt calls the inner method fresh — which, being a
+     * SEPARATE proxied bean method call, opens a BRAND NEW transaction each
+     * time. This is exactly what you want: attempt 1 fails and rolls back
+     * cleanly, attempt 2 starts completely fresh with newly-read @Version
+     * values, attempt 3 likewise.
+     */
+    @Retryable(
+            retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100, multiplier = 2
+            )
+    )
+    public void decrementStockBulk(List<StockDecrementItem> items){
+        decrementStockBulkInternals(items);
+    }
+
+    @Transactional
+    protected void decrementStockBulkInternals(List<StockDecrementItem> items) {
+        for(StockDecrementItem item : items){
+            Product product = productRepository.findById(item.getProductId()).orElseThrow(()-> new ResourceNotFoundException("Product not found: "+item.getProductId()));
+
+            if(product.getStockQuantity() < item.getQuantity()){
+                // A genuine business rule failure (not enough stock) is NOT
+                // retried — retrying a legitimately-insufficient-stock
+                // situation would never succeed no matter how many times
+                // you try. Only CONCURRENT MODIFICATION conflicts
+                // (ObjectOptimisticLockingFailureException) are worth
+                // retrying — that's specifically why retryFor targets only
+                // that one exception type above, not a broad catch-all.
+                throw new InsufficientStockException("Insufficient stock for product '"+product.getName()+"'- requested " + item.getQuantity()+",available " + product.getStockQuantity());
+            }
+            product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+            productRepository.save(product);
+            // The actual OptimisticLockException, if it happens, is thrown
+            // here (or at flush/commit) — Hibernate compares the @Version
+            // it read at the top of this loop against what's currently in
+            // the database and finds they no longer match, because some
+            // OTHER transaction updated this exact product in between.
+        }
+        // If EVERY item in this list succeeds, the @Transactional method
+        // returns normally and the whole batch commits atomically — all
+        // rows updated together, in ONE database transaction, because every
+        // Product row lives in the SAME database (catalog_db) that this
+        // service owns outright. This is worth contrasting sharply with the
+        // Order->Payment saga: THAT needed Kafka choreography specifically
+        // because it spans two SEPARATE databases with no shared
+        // transaction possible. Multi-row atomicity within ONE service's
+        // own database is just a normal ACID transaction — no saga
+        // machinery needed at all. Recognizing when you DON'T need a saga
+        // is just as important as knowing how to build one.
+    }
 
 
 }

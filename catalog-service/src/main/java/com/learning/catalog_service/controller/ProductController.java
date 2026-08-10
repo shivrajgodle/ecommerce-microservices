@@ -1,5 +1,6 @@
 package com.learning.catalog_service.controller;
 
+import com.learning.catalog_service.dto.request.BulkStockDecrementRequest;
 import com.learning.catalog_service.dto.request.ProductRequest;
 import com.learning.catalog_service.dto.request.ProductSearchRequest;
 import com.learning.catalog_service.dto.response.ApiResponse;
@@ -61,5 +62,13 @@ public class ProductController {
         productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),"Product deleted",null));
    }
+
+   @PatchMapping("/decrement-stock-bulk")
+   public ResponseEntity<ApiResponse<Void>> decrementStockBulk(@Valid @RequestBody BulkStockDecrementRequest request){
+        productService.decrementStockBulk(request.getItems());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),"Stock Decremented",null));
+   }
+
+
 
 }
