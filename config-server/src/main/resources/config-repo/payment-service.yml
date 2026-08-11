@@ -36,7 +36,7 @@ spring:
         # messages into — this is Payment Service's OWN copy of the
         # event class (Step 5 below), matching the wire shape Order
         # Service produces, per the Anti-Corruption Layer pattern.
-        spring.json.value.default.type: com.learning.paymentservice.event.OrderCreatedEvent
+        spring.json.value.default.type: com.learning.payment_service.event.OrderCreatedEvent
     listener:
       # RECORD ack-mode + manual auto-commit disabled together means:
       # Spring commits this record's offset automatically ONLY after

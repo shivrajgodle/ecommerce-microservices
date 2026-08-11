@@ -29,6 +29,10 @@ spring:
               uri: lb://ORDER-SERVICE
               predicates:
                 - Path=/api/v1/orders/**
+            - id: payment-service
+              uri: lb://PAYMENT-SERVICE
+              predicates:
+                - Path=/api/v1/payments/**
           discovery:
             locator:
               enabled: false
