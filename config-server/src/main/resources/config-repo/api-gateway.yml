@@ -33,6 +33,10 @@ spring:
               uri: lb://PAYMENT-SERVICE
               predicates:
                 - Path=/api/v1/payments/**
+            - id: review-service
+              uri: lb://REVIEW-SERVICE
+              predicates:
+                - Path=/api/v1/reviews/**
           discovery:
             locator:
               enabled: false
