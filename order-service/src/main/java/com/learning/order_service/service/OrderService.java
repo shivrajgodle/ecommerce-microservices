@@ -9,16 +9,24 @@ import com.learning.order_service.client.dto.request.BulkStockDecrementRequest;
 import com.learning.order_service.client.dto.request.CheckoutRequest;
 import com.learning.order_service.client.dto.request.ShippingAddressRequest;
 import com.learning.order_service.client.dto.request.StockDecrementItem;
+import com.learning.order_service.client.dto.response.OrderDetailResponse;
+import com.learning.order_service.client.dto.response.OrderItemResponse;
 import com.learning.order_service.client.dto.response.OrderResponse;
+import com.learning.order_service.client.dto.response.ShippingAddressResponse;
 import com.learning.order_service.entity.Order;
 import com.learning.order_service.entity.OrderItem;
+import com.learning.order_service.entity.ProcessedEvent;
 import com.learning.order_service.entity.ShippingAddress;
 import com.learning.order_service.event.OrderCreatedEvent;
 import com.learning.order_service.event.OrderItemInfo;
+import com.learning.order_service.event.PaymentFailedEvent;
+import com.learning.order_service.event.PaymentSucceededEvent;
 import com.learning.order_service.exception.CartServiceUnavailableException;
 import com.learning.order_service.exception.CatalogServiceUnavailableException;
 import com.learning.order_service.exception.EmptyCartException;
+import com.learning.order_service.exception.ResourceNotFoundException;
 import com.learning.order_service.repository.OrderRepository;
+import com.learning.order_service.repository.ProcessedEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
@@ -42,6 +50,7 @@ public class OrderService {
     private final CatalogServiceClient catalogServiceClient;
     private final CircuitBreakerFactory<?,?> circuitBreakerFactory;
     private final KafkaTemplate<String,Object> kafkaTemplate;
+    private final ProcessedEventRepository processedEventRepository;
 
     @Transactional
     public OrderResponse checkout(Long userId, CheckoutRequest request){
@@ -185,6 +194,128 @@ public class OrderService {
                         log.info("Published OrderCreatedEvent for order {}", order.getId());
                     }
                 });
+    }
+
+    public OrderDetailResponse getOrderDetail(Long userId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+
+        if (!order.getUserId().equals(userId)) {
+            /**
+             * Same "not found" response whether the order genuinely
+             * doesn't exist OR it belongs to someone else — a DELIBERATELY
+             * different choice from Review Service's explicit 403 (Phase
+             * J). There, "you can't edit THIS review" is useful, honest
+             * feedback about a resource the caller can already SEE (a
+             * public review, visible to everyone). Here, an order is
+             * private account data — confirming "order 4821 exists, you
+             * just aren't allowed to see it" (403) leaks more than simply
+             * showing nothing (404). Same underlying question —
+             * "authenticated as who, allowed to do what to this resource"
+             * — landing on a different answer because the two resources'
+             * visibility models genuinely differ.
+             */
+            throw new ResourceNotFoundException("Order not found: " + orderId);
+        }
+
+        return toDetailResponse(order);
+    }
+
+    private OrderDetailResponse toDetailResponse(Order order) {
+        List<OrderItemResponse> items = order.getItems().stream()
+                .map(item -> OrderItemResponse.builder()
+                        .productId(item.getProductId())
+                        .productName(item.getProductName())
+                        .quantity(item.getQuantity())
+                        .priceAtPurchase(item.getPriceAtPurchase())
+                        .subtotal(item.getSubTotal())
+                        .build())
+                .toList();
+
+        ShippingAddressResponse address = ShippingAddressResponse.builder()
+                .street(order.getShippingAddress().getStreet())
+                .city(order.getShippingAddress().getCity())
+                .state(order.getShippingAddress().getState())
+                .zipCode(order.getShippingAddress().getZipCode())
+                .country(order.getShippingAddress().getCountry())
+                .build();
+
+        return OrderDetailResponse.builder()
+                .id(order.getId())
+                .status(order.getStatus())
+                .totalAmount(order.getTotalAmount())
+                .createdDate(order.getCreatedDate())
+                .cancellationReason(order.getCancellationReason())
+                .shippingAddress(address)
+                .items(items)
+                .build();
+    }
+
+
+    @Transactional
+    public void handlePaymentSucceeded(PaymentSucceededEvent event) {
+        if (processedEventRepository.existsByEventId(event.getEventId())) {
+            log.info("Event {} already processed — skipping", event.getEventId());
+            return;
+        }
+
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order not found for payment outcome: " + event.getOrderId()));
+
+        try {
+            order.confirm(); // the state guard from Phase H does the real work here
+            orderRepository.save(order);
+            log.info("Order {} confirmed after successful payment", order.getId());
+        } catch (IllegalStateException ex) {
+            // The state guard threw because this order was ALREADY
+            // confirmed (or cancelled) — meaning we somehow got a
+            // duplicate delivery that slipped past the ProcessedEvent
+            // check above (a genuinely rare race, but the WHOLE reason we
+            // built Order.confirm() as a hard guard rather than a soft
+            // no-op back in Phase H). We log it as a WARNING, not an
+            // ERROR — the system's actual state is still correct, this is
+            // a caught, expected redundancy, not a real failure.
+            log.warn("Order {} confirm() rejected — already in a terminal state: {}",
+                    order.getId(), ex.getMessage());
+        }
+
+        processedEventRepository.save(new ProcessedEvent(event.getEventId()));
+    }
+
+    @Transactional
+    public void handlePaymentFailed(PaymentFailedEvent event) {
+        if (processedEventRepository.existsByEventId(event.getEventId())) {
+            log.info("Event {} already processed — skipping", event.getEventId());
+            return;
+        }
+
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order not found for payment outcome: " + event.getOrderId()));
+
+        try {
+            order.cancel(event.getReason());
+            orderRepository.save(order);
+            log.warn("Order {} cancelled — payment failed: {}", order.getId(), event.getReason());
+
+            // NOTE, flagged honestly: a fully correct implementation would
+            // ALSO reverse the stock decrement from checkout here — a
+            // second Feign call to Catalog Service restoring the reserved
+            // quantity, since the sale never actually completed. This is
+            // the COMPENSATING ACTION half of the saga pattern (the "undo
+            // step" every choreographed saga step should have ready for
+            // exactly this scenario) — we're calling it out explicitly
+            // rather than silently omitting it, since "what's the
+            // compensating action for each saga step" is a question you
+            // should always be able to answer, even in a learning project
+            // that doesn't wire every single one.
+        } catch (IllegalStateException ex) {
+            log.warn("Order {} cancel() rejected — already in a terminal state: {}",
+                    order.getId(), ex.getMessage());
+        }
+
+        processedEventRepository.save(new ProcessedEvent(event.getEventId()));
     }
 
 }

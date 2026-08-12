@@ -42,9 +42,14 @@ public class CartController {
     }
 
     @DeleteMapping("/items/{itemId}")
-    public ResponseEntity<ApiResponse<CartResponse>> removeItem(
-            @CurrentUserId Long userId, @PathVariable Long itemId) {
+    public ResponseEntity<ApiResponse<CartResponse>> removeItem(@CurrentUserId Long userId, @PathVariable Long itemId) {
         CartResponse result = cartService.removeItem(userId, itemId);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Item removed from cart", result));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<Void>> clearCart(@CurrentUserId Long userId) {
+        cartService.clearCart(userId);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Cart cleared", null));
     }
 }

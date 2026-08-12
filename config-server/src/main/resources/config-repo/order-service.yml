@@ -23,6 +23,23 @@ spring:
       retries: 3
       properties:
         enable.idempotence: true
+    consumer:
+      group-id: order-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: "com.learning.*"
+        spring.json.use.type.headers: false
+      listener:
+        ack-mode: record
+
+  cloud:
+    openfeign:
+      httpclient:
+        hc5:
+          enabled: true   # switches Feign's underlying HTTP client to Apache HttpClient5, which supports PATCH natively — fixes the "Invalid HTTP method: PATCH" error from decrementStockBulk()
 
 feign:
   client:

@@ -101,6 +101,17 @@ public class CartService {
         return toResponse(saved);
     }
 
+    @Transactional
+    public void clearCart(Long userId) {
+        Cart cart = getCartOrThrow(userId);
+        // Copy into a new list first — removeItem() below mutates
+        // cart.getItems() as it goes (orphanRemoval=true), so iterating
+        // the live collection directly would throw ConcurrentModificationException.
+        List<CartItem> itemsToRemove = List.copyOf(cart.getItems());
+        itemsToRemove.forEach(cart::removeItem);
+        cartRepository.save(cart);
+    }
+
     private Cart getOrCreateCart(Long userId) {
         // Auto-creating an empty cart on first view is a deliberate UX
         // choice — "view my cart" should never 404 just because someone
