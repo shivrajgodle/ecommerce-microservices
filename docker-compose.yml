@@ -25,3 +25,9 @@ services:
       # flagging that now so the convenience here doesn't read as the
       # production-correct approach.
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"

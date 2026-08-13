@@ -14,7 +14,12 @@ management:
     web:
       exposure:
         include: health,info,refresh
-
+  tracing:
+    sampling:
+      probability: 1.0   # trace EVERY request — fine for local learning; a real production system would sample a fraction (e.g. 0.1 = 10%) to control storage volume and overhead at real traffic scale
+    export:
+      zipkin:
+        endpoint: http://localhost:9411/api/v2/spans
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [${spring.application.name},%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"

@@ -1,5 +1,6 @@
 package com.learning.catalog_service.mapper;
 
+
 import com.learning.catalog_service.dto.response.ProductResponse;
 import com.learning.catalog_service.entity.Product;
 import com.learning.catalog_service.entity.Tag;
@@ -16,7 +17,6 @@ import java.util.stream.Collectors;
  * you never write or see the generated class's source directly (it
  * lands in target/generated-sources during compilation).
  */
-
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
@@ -43,7 +43,5 @@ public interface ProductMapper {
     // categoryId) and resolved/created Tag entities — work a pure
     // mapper has no business doing (it shouldn't depend on a
     // repository). That construction logic belongs in the service,
-    // shown next
-
-
+    // shown next.
 }

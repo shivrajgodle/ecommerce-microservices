@@ -16,6 +16,11 @@ spring:
   # write the listener for payment.succeeded/payment.failed.
   kafka:
     bootstrap-servers: localhost:9092
+    template:
+      observation-enabled: true    # wraps every KafkaTemplate.send() call in an observation, creating a span AND injecting the current trace context into the outgoing record's HEADERS
+    listener:
+      observation-enabled: true # on the consuming side, extracts that trace context back OUT of the record's headers and continues the SAME trace, rather than starting a brand new, disconnected one
+      ack-mode: record
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -32,8 +37,7 @@ spring:
       properties:
         spring.json.trusted.packages: "com.learning.*"
         spring.json.use.type.headers: false
-      listener:
-        ack-mode: record
+
 
   cloud:
     openfeign:

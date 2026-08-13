@@ -13,6 +13,11 @@ spring:
 
   kafka:
     bootstrap-servers: localhost:9092
+    template:
+      observation-enabled: true    # wraps every KafkaTemplate.send() call in an observation, creating a span AND injecting the current trace context into the outgoing record's HEADERS
+    listener:
+      observation-enabled: true # on the consuming side, extracts that trace context back OUT of the record's headers and continues the SAME trace, rather than starting a brand new, disconnected one
+      ack-mode: record
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -37,11 +42,3 @@ spring:
         # event class (Step 5 below), matching the wire shape Order
         # Service produces, per the Anti-Corruption Layer pattern.
         spring.json.value.default.type: com.learning.payment_service.event.OrderCreatedEvent
-    listener:
-      # RECORD ack-mode + manual auto-commit disabled together means:
-      # Spring commits this record's offset automatically ONLY after
-      # the listener method returns successfully — not on a timer, not
-      # regardless of outcome. If the listener throws, the offset is
-      # NOT committed, and (per the error handler in Step 6) the
-      # message gets retried.
-      ack-mode: record
