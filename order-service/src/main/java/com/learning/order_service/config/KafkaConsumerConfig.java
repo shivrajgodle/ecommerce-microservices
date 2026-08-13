@@ -44,7 +44,7 @@ public class KafkaConsumerConfig {
      * setting, while still each getting their own concrete type.
      */
     private Map<String, Object> baseConsumerProps() {
-        return kafkaProperties.buildConsumerProperties(null);
+        return kafkaProperties.buildConsumerProperties();
     }
 
     @Bean
