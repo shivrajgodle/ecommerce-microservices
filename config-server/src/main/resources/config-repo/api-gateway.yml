@@ -50,3 +50,19 @@ management:
 app:
   jwt:
     secret: "ZWNvbW1lcmNlLWlkZW50aXR5LXNlcnZpY2Utc3VwZXItc2VjcmV0LWtleS1jaGFuZ2UtbWU="
+  ratelimit:
+      # DELIBERATELY strict — auth endpoints (login/register) are the
+      # classic target for credential-stuffing/brute-force attacks. A
+      # legitimate user rarely needs more than a couple of login attempts
+      # per minute; an attacker trying thousands of password guesses is
+      # exactly what this limit exists to slow down.
+    public:
+      capacity: 5
+      refill-tokens: 5
+      refill-period-seconds: 60
+    # Generous — this is the limit for already-authenticated traffic
+    # across every other endpoint in the system.
+    authenticated:
+      capacity: 60
+      refill-tokens: 60
+      refill-period-seconds: 60
