@@ -9,3 +9,8 @@ CREATE DATABASE cart_db;
 CREATE DATABASE order_db;
 CREATE DATABASE payment_db;
 CREATE DATABASE review_db;
+
+INSERT INTO roles (name, created_date, modified_date, is_deleted) VALUES
+('ROLE_CUSTOMER', now(), now(), false),
+('ROLE_SELLER', now(), now(), false),
+('ROLE_ADMIN', now(), now(), false);
