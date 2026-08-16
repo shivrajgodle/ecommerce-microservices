@@ -46,8 +46,7 @@ public class SecurityConfig {
                 // architecture.
 
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
+                
                 // STATELESS is the single most important line in this class:
                 // it tells Spring Security to NEVER create or read an
                 // HttpSession. Every request must carry its own proof of
@@ -99,25 +98,6 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception{
         return config.getAuthenticationManager();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        // Permissive for local learning. In the real deployment (Phase
-        // D onward), CORS is more commonly centralized at the API
-        // Gateway — the single edge every browser request actually hits
-        // — rather than configured redundantly on every downstream
-        // service. Keeping a basic config here too means this service
-        // still works correctly if called directly (e.g. from Postman
-        // or during local testing without the gateway running).
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("*"));
-        corsConfiguration.setAllowedMethods(List.of("GET","POST","DELETE","PATCH","PUT","OPTIONS"));
-        corsConfiguration.setAllowedHeaders(List.of("*"));
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**",corsConfiguration);
-        return source;
     }
 
 }
