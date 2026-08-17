@@ -8,6 +8,14 @@ import com.learning.order_service.security.CurrentUserId;
 import com.learning.order_service.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import javax.swing.SortOrder;
+
+import org.hibernate.query.SortDirection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,4 +39,12 @@ public class OrderController {
         OrderDetailResponse result = orderService.getOrderDetail(userId, id);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Order retrieved", result));
     }
+
+    @GetMapping
+    public ResponseEntity<Page<OrderResponse>> getMyOrders(
+            @CurrentUserId Long userId,
+            @PageableDefault(size = 10, sort = "createdDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(orderService.getOrdersForUser(userId, pageable));
+    }
+
 }

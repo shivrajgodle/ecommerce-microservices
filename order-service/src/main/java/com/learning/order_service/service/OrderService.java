@@ -30,6 +30,8 @@ import com.learning.order_service.repository.ProcessedEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -196,30 +198,6 @@ public class OrderService {
                 });
     }
 
-    public OrderDetailResponse getOrderDetail(Long userId, Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
-
-        if (!order.getUserId().equals(userId)) {
-            /**
-             * Same "not found" response whether the order genuinely
-             * doesn't exist OR it belongs to someone else — a DELIBERATELY
-             * different choice from Review Service's explicit 403 (Phase
-             * J). There, "you can't edit THIS review" is useful, honest
-             * feedback about a resource the caller can already SEE (a
-             * public review, visible to everyone). Here, an order is
-             * private account data — confirming "order 4821 exists, you
-             * just aren't allowed to see it" (403) leaks more than simply
-             * showing nothing (404). Same underlying question —
-             * "authenticated as who, allowed to do what to this resource"
-             * — landing on a different answer because the two resources'
-             * visibility models genuinely differ.
-             */
-            throw new ResourceNotFoundException("Order not found: " + orderId);
-        }
-
-        return toDetailResponse(order);
-    }
 
     private OrderDetailResponse toDetailResponse(Order order) {
         List<OrderItemResponse> items = order.getItems().stream()
@@ -317,5 +295,47 @@ public class OrderService {
 
         processedEventRepository.save(new ProcessedEvent(event.getEventId()));
     }
+    
+
+    public Page<OrderResponse> getOrdersForUser(Long userId, Pageable pageable) {
+        return orderRepository.findByUserId(userId, pageable).map(this::toSummaryResponse);
+    }
+
+    public OrderDetailResponse getOrderDetail(Long userId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+
+        if (!order.getUserId().equals(userId)) {
+            /**
+             * Same "not found" response whether the order genuinely
+             * doesn't exist OR it belongs to someone else — a DELIBERATELY
+             * different choice from Review Service's explicit 403 (Phase
+             * J). There, "you can't edit THIS review" is useful, honest
+             * feedback about a resource the caller can already SEE (a
+             * public review, visible to everyone). Here, an order is
+             * private account data — confirming "order 4821 exists, you
+             * just aren't allowed to see it" (403) leaks more than simply
+             * showing nothing (404). Same underlying question —
+             * "authenticated as who, allowed to do what to this resource"
+             * — landing on a different answer because the two resources'
+             * visibility models genuinely differ.
+             */
+            throw new ResourceNotFoundException("Order not found: " + orderId);
+        }
+
+        return toDetailResponse(order);
+    }
+
+    private OrderResponse toSummaryResponse(Order order) {
+        return OrderResponse.builder()
+                .id(order.getId())
+                .status(order.getStatus())
+                .totalAmount(order.getTotalAmount())
+                .createdDate(order.getCreatedDate())
+                .build();
+    }
+
+
+    
 
 }
