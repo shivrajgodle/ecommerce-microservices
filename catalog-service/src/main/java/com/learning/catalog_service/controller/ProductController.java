@@ -4,17 +4,24 @@ import com.learning.catalog_service.dto.request.BulkStockDecrementRequest;
 import com.learning.catalog_service.dto.request.ProductRequest;
 import com.learning.catalog_service.dto.request.ProductSearchRequest;
 import com.learning.catalog_service.dto.response.ApiResponse;
+import com.learning.catalog_service.dto.response.BulkUploadResult;
 import com.learning.catalog_service.dto.response.ProductResponse;
 import com.learning.catalog_service.entity.Product;
 import com.learning.catalog_service.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -69,6 +76,30 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(),"Stock Decremented",null));
    }
 
+  
+   @PostMapping(value = "/bulk-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+   public ResponseEntity<ApiResponse<BulkUploadResult>> bulkUpload(@RequestParam("file") MultipartFile file){
+     if(file.isEmpty()){
+          throw new IllegalArgumentException("Uploaded file is empty");
+     }
+     BulkUploadResult result = productService.bulkUpload(file);
+     return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Bulk Upload processed", result));
+   }
+
+   @GetMapping("/export")
+   public ResponseEntity<ByteArrayResource> export(){
+     byte[] data = productService.exportProductsToExcel();
+     ByteArrayResource resource = new ByteArrayResource(data);
+     return ResponseEntity.ok()
+            // Content-Disposition: attachment is what tells the
+            // BROWSER (not just Postman) to download this as a file
+            // named products.xlsx rather than trying to render it
+            // inline — the header a normal JSON response never needs.
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=products.xlsx")
+            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .contentLength(data.length)
+            .body(resource);
+   }
 
 
 }
